@@ -43,7 +43,22 @@
 4. Entra con `admin@visionhub.local` / `inspeccion2026`. Debería llevarte a `/camera` y pedir permiso de cámara.
 
 **Pendiente / riesgos para el siguiente hito:**
-- Probar la cámara desde un móvil real (no solo `curl`): `getUserMedia` exige HTTPS salvo en `localhost`, así que para probarlo desde el teléfono hace falta Nginx con certificado o un túnel. No se ha probado todavía en un dispositivo real — esto no debe darse por superado hasta hacerlo.
+- Falta la prueba final en un móvil real (ver más abajo, ya hay HTTPS listo para hacerla).
 - No hay TOTP/2FA ni OIDC corporativo todavía (SEC-109, fase posterior).
 - No hay overlays, IA, ni guardado offline (eso es P1: CAM-102, AI-103, DATA-105).
 - Confirmar con Fernando si de verdad no hace falta modelo `Tenant` (ver nota arriba).
+
+## 2026-11-03 — HTTPS real en visionhub.juncopineiro.com
+
+**Qué se ha hecho:**
+- Fernando creó el DNS de `visionhub.juncopineiro.com` apuntando al VPS.
+- Añadida la configuración de Nginx (`infrastructure/nginx/visionhub.juncopineiro.com.conf`), como proxy hacia el `next dev` del puerto 3400 — es una configuración **temporal de desarrollo**, no la de producción (eso llega cuando haya un contenedor `vh-app` como el de Queue Hub).
+- Certificado HTTPS real emitido con Certbot (Let's Encrypt), igual que en Queue Hub/Experience OS. Redirección automática de HTTP a HTTPS.
+
+**Pruebas ejecutadas y resultado real:**
+- `nginx -t` → configuración válida antes de recargar.
+- `curl https://visionhub.juncopineiro.com/login` → 200, con cookies de Auth.js ya marcadas como `Secure` (la app detectó sola que va por HTTPS a través del proxy).
+- `curl http://visionhub.juncopineiro.com/login` → 301 a HTTPS.
+- Un primer intento justo tras el cambio de `middleware.ts` a `proxy.ts` dio un 404 puntual (Turbopack recompilando esa ruta); se repitió la prueba tres veces más y salió 200 siempre — no era un fallo real, quedó anotado para no confundirlo con un bug si vuelve a pasar tras cambiar archivos en caliente.
+
+**Pendiente:** la prueba real desde el navegador del móvil de Fernando (pedir permiso de cámara y ver la imagen en directo) — siguiente paso inmediato.
