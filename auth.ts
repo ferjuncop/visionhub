@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { recordEvent } from "@/lib/audit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Necesario al estar detrás de Nginx como proxy inverso (self-hosted,
+  // no Vercel) — sin esto, Auth.js puede rechazar peticiones en producción.
+  trustHost: true,
   session: {
     strategy: "jwt",
     maxAge: 8 * 60 * 60, // 8 horas, igual que Queue Hub

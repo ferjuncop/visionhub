@@ -1,0 +1,14 @@
+# Lo que NO debe entrar en la imagen de Docker.
+# Secretos: el .env se monta al arrancar el contenedor (ver deploy.sh), nunca se hornea.
+.env*
+!.env.example
+# Se instalan/generan limpios dentro de la construcción
+node_modules
+.next
+*.tsbuildinfo
+# Historial y ficheros locales que no hacen falta para ejecutar
+.git
+.claude
+*.log
+# ML (no forma parte de la app web)
+ml/

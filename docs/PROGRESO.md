@@ -63,6 +63,29 @@
 
 **Confirmado por Fernando desde su móvil real (2026-11-03): login hecho y cámara visible.** Hito 1 completado.
 
+## 2026-11-03 — Despliegue real: contenedor Docker + deploy.sh (como Queue Hub)
+
+**Qué se ha hecho:**
+- `Dockerfile` de dos etapas (deps/builder + runner), con pnpm, siguiendo exactamente el patrón de Queue Hub: el runner se queda con el proyecto completo (no solo `.next`), para poder ejecutar `prisma migrate deploy`, el seed y los tests con `docker exec` sin descargar nada de internet.
+- `deploy.sh`: construye la imagen, guarda la anterior como `vh-app:previous`, sustituye el contenedor (red `vh-net`, solo en `127.0.0.1:3400`, límite de memoria 384 MB), aplica las migraciones de Prisma ya revisadas en git, comprueba `/api/health` y ejecuta los tests — si algo falla, vuelve sola a la versión anterior.
+- `.env.docker` (no se sube a git): `DATABASE_URL` apuntando a `vh-postgres` por nombre de contenedor dentro de la red `vh-net`, no por el puerto publicado en `127.0.0.1` — igual que hace Queue Hub con su contenedor `postgres`.
+- Nuevo endpoint `/api/health` (comprueba que la app puede hablar con la base de datos), usado tanto por `deploy.sh` como, en el futuro, por monitorización.
+- `trustHost: true` añadido a Auth.js: necesario para funcionar detrás de Nginx como proxy inverso en producción (sin esto, Auth.js puede rechazar las peticiones).
+
+**Errores reales encontrados y corregidos antes de dar esto por terminado:**
+1. Fallo de tipos de TypeScript en `lib/audit.ts` (el campo `payload` de Prisma no aceptaba directamente un `Record<string, unknown>`) — solo aparecía en `next build` (producción), no en `next dev`. Corregido con el tipo `Prisma.InputJsonValue`.
+2. La función experimental "Cache Components" de Next.js 16 (activada por defecto por `create-next-app`) impedía compilar `app/page.tsx` porque lee la sesión del usuario. Como ninguna página de esta app es realmente estática, se desactivó esa función en `next.config.ts` en vez de pelear con ella.
+
+**Pruebas ejecutadas y resultado real:**
+- `pnpm build`, `pnpm lint` y `pnpm test` en local, en verde, antes de construir la imagen.
+- `./deploy.sh` ejecutado de verdad: imagen construida, contenedor `vh-app` sustituido, `prisma migrate deploy` (sin migraciones pendientes, ya aplicadas), tests pasados dentro del propio contenedor, `/api/health` respondiendo.
+- Login real por HTTPS contra el contenedor de producción (no contra `next dev`): `admin@visionhub.local` → sesión válida. `GET /api/health` → `{"ok":true,"database":true}`.
+
+**Pendiente / riesgos:**
+- No se ha probado todavía un rollback real (parar el contenedor nuevo a propósito y comprobar que `deploy.sh` vuelve solo a `vh-app:previous`) — queda como prueba pendiente, no se da por garantizado solo porque el script lo prevé.
+- La RAM del VPS sigue ajustada (ver `docs/DECISIONS.md`): el contenedor tiene un límite de 384 MB; si en el futuro se añade el motor de visión (inferencia), hay que volver a medir.
+- Pendiente seguir sin resolver: modelo `Tenant` y dónde entrenar los modelos.
+
 Por el camino hubo que arreglar un fallo real: el servidor de desarrollo de Next.js bloqueaba por seguridad los recursos de recarga en caliente (`/_next/hmr`) al no venir la petición de `localhost`, lo que rompía el JavaScript de la página y el botón "Entrar" no hacía nada (parecía un problema de usuario/contraseña, pero no lo era). Solución: `allowedDevOrigins: ["visionhub.juncopineiro.com"]` en `next.config.ts`. Verificado con un login completo por `curl` contra el dominio real (HTTPS) antes de pedirle a Fernando que lo reintentara.
 
 **ACC-01/ACC-02 (cámara funciona, no bloquea) — superados en un dispositivo real, por primera vez con datos de prueba reales en vez de solo `curl`.**

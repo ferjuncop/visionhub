@@ -4,6 +4,7 @@
 // recordEvent NUNCA lanza error: si el registro falla, se anota en el log
 // y la acción del usuario sigue adelante. Mismo patrón que Queue Hub.
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export type AuditInput = {
@@ -19,7 +20,7 @@ export async function recordEvent(e: AuditInput): Promise<void> {
       data: {
         type: e.type,
         actorId: e.actorId ?? null,
-        payload: e.payload,
+        payload: e.payload as Prisma.InputJsonValue | undefined,
         ip: e.ip ?? null,
       },
     });
