@@ -33,3 +33,11 @@ Se reutilizan directamente estos patrones ya probados en producción:
 **Qué no cambia:** el entrenamiento y la exportación de modelos (PyTorch/Ultralytics/ONNX) siguen siendo Python, en scripts independientes dentro de `ml/`, sin exponerse como servicio web — no hace falta FastAPI para eso.
 
 **Riesgo registrado:** si el rendimiento de cámara/inferencia en Next.js resulta insuficiente en dispositivos reales (TECH-002, benchmark pendiente), revisar esta decisión antes de avanzar más en el motor visual — no después.
+
+## 2026-11-03 — Supuesto: VisionHub no es multi-tenant (a confirmar)
+
+El esquema de Prisma del Hito 1 no incluye un modelo `Tenant`, a diferencia de Experience OS y Queue Hub. El documento de análisis (sección 9.2) lista `User/Role`, `Site`, `Room`, etc. sin mencionar `Tenant`, lo que sugiere una herramienta de uso interno de una sola organización, no un SaaS para varios clientes.
+
+**Motivo:** no inventar una entidad que el documento no pide.
+
+**A confirmar con Fernando:** si en el futuro distintas empresas clientes van a usar la misma instalación de VisionHub con datos separados, hay que añadir `tenantId` ahora, antes de que existan más datos y migraciones que reescribir.

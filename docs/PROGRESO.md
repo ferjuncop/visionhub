@@ -14,6 +14,36 @@
 - Todavía no hay nada que ejecutar o abrir en un navegador: es solo la base del repositorio.
 
 **Pendiente / riesgos:**
-- Falta añadir la clave pública `visionhub_deploy.pub` como Deploy Key (con permiso de escritura) en la configuración del repositorio de GitHub antes de poder hacer el primer `git push`.
-- Pendiente de decidir: unificar stack con Next.js (como Experience OS/Queue Hub) o seguir la propuesta original del documento (Vite + FastAPI) — ver `docs/DECISIONS.md`.
 - Pendiente de decidir: dónde entrenar modelos (este VPS con límites, u otra máquina).
+
+## 2026-11-03 — Hito 1: scaffold de la app (Next.js), login y cámara en directo
+
+**Qué se ha hecho:**
+- Decidido y registrado el stack definitivo: Next.js (App Router) reutilizando los patrones de Experience OS/Queue Hub (ver `docs/DECISIONS.md`).
+- Creada la app Next.js con TypeScript y Tailwind (`create-next-app`), con `prisma`, `@prisma/client`, `next-auth@5 (beta)`, `bcryptjs`, `vitest`, `tsx` — versiones fijadas igual que Queue Hub para máxima compatibilidad.
+- Esquema de Prisma mínimo: `User` (con rol ADMIN/TECHNICIAN) y `AuditEvent` (registro de actividad, nunca lanza error — mismo patrón que Queue Hub). **Nota:** no se ha incluido `Tenant`; el documento de análisis no lo pide (parece una herramienta de una sola organización, no un SaaS multi-cliente). Señalado como supuesto a confirmar en `docs/DECISIONS.md`.
+- Contenedor propio `vh-postgres` (PostgreSQL 17, solo en `127.0.0.1:55434`, límite de memoria 256 MB) en `infrastructure/docker-compose.yml`.
+- Login con email/contraseña (Auth.js, sesión JWT de 8 horas) y página `/camera` protegida que pide la cámara real del dispositivo con `getUserMedia` (sin IA todavía, eso es un hito posterior).
+- Usuario de prueba creado: `admin@visionhub.local`.
+- Un archivo de Next.js (`middleware.ts`) tuvo que renombrarse a `proxy.ts`: esta versión de Next.js (16.4.4) ya no admite la convención antigua.
+
+**Pruebas ejecutadas y resultado real:**
+- `pnpm lint` → sin errores.
+- `pnpm vitest run` → 1 test en verde (`recordEvent` nunca lanza error aunque falle la base de datos).
+- Arrancado `pnpm dev` de verdad y probado con peticiones HTTP reales (no solo "debería funcionar"):
+  - `GET /` sin sesión → redirige a `/login` (307). Con sesión → a `/camera`.
+  - Login con la contraseña correcta → `302` y sesión válida (`/api/auth/session` devuelve el usuario).
+  - Login con contraseña incorrecta → no entra, `/camera` sigue redirigiendo a `/login`, y queda un `auth.login_failed` en la tabla `AuditEvent` (comprobado por consulta SQL directa, no solo leyendo el código).
+  - Login correcto queda como `auth.login_ok` en `AuditEvent`.
+
+**Cómo probarlo tú mismo:**
+1. `cd /root/visionhub && cp .env.example .env` y edítalo si quieres otra contraseña (ya hay un `.env` real generado, con secretos propios, que no está en git).
+2. `docker compose -p vh --env-file .env -f infrastructure/docker-compose.yml up -d --wait` (si no está ya levantado).
+3. `pnpm install && pnpm dev` — abre `http://<IP-del-VPS>:3400` en el navegador del móvil (necesita HTTPS para la cámara en la mayoría de navegadores si no es `localhost`; para probar en el propio VPS por SSH con túnel, o desde el móvil en la misma red, esto es una limitación a resolver en el siguiente hito).
+4. Entra con `admin@visionhub.local` / `inspeccion2026`. Debería llevarte a `/camera` y pedir permiso de cámara.
+
+**Pendiente / riesgos para el siguiente hito:**
+- Probar la cámara desde un móvil real (no solo `curl`): `getUserMedia` exige HTTPS salvo en `localhost`, así que para probarlo desde el teléfono hace falta Nginx con certificado o un túnel. No se ha probado todavía en un dispositivo real — esto no debe darse por superado hasta hacerlo.
+- No hay TOTP/2FA ni OIDC corporativo todavía (SEC-109, fase posterior).
+- No hay overlays, IA, ni guardado offline (eso es P1: CAM-102, AI-103, DATA-105).
+- Confirmar con Fernando si de verdad no hace falta modelo `Tenant` (ver nota arriba).

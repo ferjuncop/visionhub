@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Herramienta de uso interno de una sola organización (no es SaaS
+// multi-cliente como Experience OS/Queue Hub), según el documento de
+// análisis: no hay entidad Tenant. Revisar si esto cambia.
+enum UserRole {
+  ADMIN
+  TECHNICIAN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(TECHNICIAN)
+  createdAt    DateTime @default(now())
+
+  auditEvents AuditEvent[]
+}
+
+// Registro de todo lo importante (login, publicación, reproducción, error...).
+// Mismo patrón que Queue Hub/Experience OS: nunca debe impedir la acción del
+// usuario si el registro falla (ver lib/audit.ts).
+model AuditEvent {
+  id        String   @id @default(cuid())
+  type      String
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  payload   Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+}
