@@ -41,3 +41,14 @@ El esquema de Prisma del Hito 1 no incluye un modelo `Tenant`, a diferencia de E
 **Motivo:** no inventar una entidad que el documento no pide.
 
 **A confirmar con Fernando:** si en el futuro distintas empresas clientes van a usar la misma instalación de VisionHub con datos separados, hay que añadir `tenantId` ahora, antes de que existan más datos y migraciones que reescribir.
+
+## 2026-11-03 — Entrenamiento: en una máquina propia con GPU, no en este VPS
+
+**Decisión (orientativa, Fernando la confirmará cuando esa máquina esté lista):** el entrenamiento de modelos se hará en un ordenador propio de Fernando con GPU, no en este VPS (que no tiene GPU y tiene la RAM ajustada). Se conectaría al VPS mediante Tailscale para mover datasets/checkpoints entre ambos.
+
+**Motivo:** mantiene las imágenes y los pesos en infraestructura propia (cumple la política de privacidad del documento de análisis) y evita saturar un VPS que ya comparte recursos con Experience OS y Queue Hub.
+
+**Pendiente antes de poder activar esto de verdad:**
+- Confirmar que esa máquina existe, está disponible y tiene una GPU compatible (no se asume, hay que comprobarlo cuando llegue el momento, igual que se hizo con el VPS).
+- Instalar y configurar Tailscale en ambas máquinas (requiere su propia confirmación cuando se haga: instala software de red, cambia cómo se accede a los equipos).
+- Esta decisión no bloquea nada por ahora: no hay dataset todavía (ML-004), así que no hace falta resolver dónde se entrena hasta que haya imágenes reales que entrenar.
