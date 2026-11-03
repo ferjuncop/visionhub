@@ -82,9 +82,20 @@
 - Login real por HTTPS contra el contenedor de producción (no contra `next dev`): `admin@visionhub.local` → sesión válida. `GET /api/health` → `{"ok":true,"database":true}`.
 
 **Pendiente / riesgos:**
-- No se ha probado todavía un rollback real (parar el contenedor nuevo a propósito y comprobar que `deploy.sh` vuelve solo a `vh-app:previous`) — queda como prueba pendiente, no se da por garantizado solo porque el script lo prevé.
 - La RAM del VPS sigue ajustada (ver `docs/DECISIONS.md`): el contenedor tiene un límite de 384 MB; si en el futuro se añade el motor de visión (inferencia), hay que volver a medir.
 - Pendiente seguir sin resolver: modelo `Tenant` y dónde entrenar los modelos.
+
+## 2026-11-03 — Prueba real del rollback automático
+
+**Qué se ha hecho:** se rompió `lib/health.ts` a propósito (sin commitearlo nunca) para que `/api/health` devolviera siempre fallo, y se lanzó `./deploy.sh` de verdad con esa versión rota.
+
+**Resultado real observado:**
+- `deploy.sh` construyó la imagen rota, sustituyó el contenedor, detectó que `/api/health` no respondía sano, imprimió los registros del contenedor roto, **volvió sola** a `vh-app:previous` y confirmó "✓ Versión anterior restaurada." — terminando con código de error (el despliegue en sí se marca como fallido, aunque el sitio siga funcionando con la versión anterior).
+- Se repitió el despliegue roto una segunda vez (por error, antes de revertir el cambio) y el comportamiento fue idéntico y seguro: `vh-app:previous` nunca llegó a sobrescribirse con una imagen rota — solo se actualiza a partir de lo que ya era `latest` antes de cada intento.
+- Comprobado con `docker inspect` que, tras el rollback, el contenedor en marcha era literalmente la misma imagen que `vh-app:previous` (mismo ID), no la rota.
+- Revertido el cambio (`git checkout -- lib/health.ts`, nunca llegó a entrar en ningún commit) y vuelto a desplegar la versión real: `/api/health` → `{"ok":true,"database":true}`.
+
+**Conclusión:** el rollback automático de `deploy.sh` funciona de verdad, no solo sobre el papel.
 
 Por el camino hubo que arreglar un fallo real: el servidor de desarrollo de Next.js bloqueaba por seguridad los recursos de recarga en caliente (`/_next/hmr`) al no venir la petición de `localhost`, lo que rompía el JavaScript de la página y el botón "Entrar" no hacía nada (parecía un problema de usuario/contraseña, pero no lo era). Solución: `allowedDevOrigins: ["visionhub.juncopineiro.com"]` en `next.config.ts`. Verificado con un login completo por `curl` contra el dominio real (HTTPS) antes de pedirle a Fernando que lo reintentara.
 
