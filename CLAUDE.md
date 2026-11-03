@@ -35,6 +35,9 @@ Plataforma web móvil para que técnicos inspeccionen salas audiovisuales, panta
 - Contenedores propios (cuando existan) con nombres que empiecen por `vh-`, red Docker propia, puertos solo en `127.0.0.1`.
 - Capacidad real medida el 2026-11-03: 6 núcleos, ~7.7 GB RAM (con poca disponible según carga del momento), sin GPU. Ver `docs/DECISIONS.md`.
 
-## Stack
+## Stack (decidido 2026-11-03, ver docs/DECISIONS.md)
 
-Pendiente de decisión final — ver `docs/DECISIONS.md`. En evaluación: reutilizar el stack ya probado en producción (Next.js + Prisma + PostgreSQL + Auth.js, como Experience OS y Queue Hub) para todo lo que no sea el motor de visión, frente a la propuesta original del documento de análisis (Vite + FastAPI). El entrenamiento/exportación de modelos es Python (PyTorch/Ultralytics/ONNX) en cualquier caso.
+- App única Next.js (App Router) + React + TypeScript + Tailwind + Prisma + PostgreSQL + Auth.js + pnpm — mismo patrón que Queue Hub, reutilizando lo ya construido en Experience OS y Queue Hub (multi-tenant por `tenantId` + `withAuthz`, `recordEvent` de auditoría, TOTP/rate limiting, `deploy.sh` con rollback, backups con cron).
+- Contenedores propios con prefijo `vh-`, red Docker propia, puertos solo en `127.0.0.1`.
+- Entrenamiento y exportación de modelos (PyTorch/Ultralytics/ONNX): Python, en `ml/`, scripts independientes sin exponerse como servicio web — no se usa FastAPI.
+- No cerrado todavía: PWA frente a Capacitor/nativa para la cámara (pendiente de benchmark en dispositivo real, TECH-002) y dónde se entrena (este VPS con límites, u otra máquina).

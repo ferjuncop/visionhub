@@ -17,14 +17,19 @@ VisionHub no hereda el `CLAUDE.md` global de `/root` (describe Experience OS, un
 
 **Pendiente de decidir:** si el entrenamiento de modelos se hace en este VPS (con límites estrictos y en horas de bajo uso) o en otra máquina, dejando este VPS solo para inferencia/producción.
 
-## Pendiente — Unificación de stack con Experience OS / Queue Hub
+## 2026-11-03 — Unificación de stack: Next.js, reutilizando Experience OS y Queue Hub
 
-Auditados ambos proyectos hermanos (mismo VPS). Patrones reutilizables encontrados:
-- Next.js + React + TypeScript + Tailwind + Prisma + PostgreSQL + Auth.js (JWT), pnpm.
+**Decisión:** VisionHub se construye sobre Next.js (App Router) + React + TypeScript + Tailwind + Prisma + PostgreSQL + Auth.js + pnpm, en vez de la propuesta original del documento (Vite + FastAPI). Se aplica tanto a la app móvil del técnico como al backend/API: un único Next.js, siguiendo el patrón de Queue Hub (una sola app, no separada en apps/mobile-web + apps/api como sugería el documento) salvo que una necesidad real obligue a separar más adelante.
+
+Se reutilizan directamente estos patrones ya probados en producción:
 - Multi-tenant por `tenantId` en cada tabla relevante + wrapper de autorización por petición (`withAuthz` en Queue Hub).
-- Registro de eventos de auditoría (`recordEvent`, nunca lanza error) — encaja con el requisito de trazabilidad del documento de análisis.
-- Autenticación con TOTP (2FA) y rate limiting ya implementados en Queue Hub, reutilizables para el requisito de SSO/OIDC corporativo.
-- Infraestructura: contenedores con prefijo propio por proyecto, red Docker propia, puertos solo en `127.0.0.1`, `deploy.sh` con imagen anterior de respaldo y rollback automático si falla el health check, backups con cron.
-- Agentes nativos ya construidos en Queue Hub (Android con APK/Device Owner, Windows con PowerShell/NSIS) — lecciones ya aprendidas sobre MDM y depuración ADB, relevantes si la PWA no basta para este proyecto.
+- Registro de eventos de auditoría (`recordEvent`, nunca lanza error) para el requisito de trazabilidad.
+- Autenticación con TOTP (2FA) y rate limiting de Queue Hub, como base para el SSO/OIDC corporativo.
+- Infraestructura: contenedores con prefijo propio (`vh-`), red Docker propia, puertos solo en `127.0.0.1`, patrón de `deploy.sh` con imagen anterior de respaldo y rollback si falla el health check, backups con cron.
+- Agentes nativos ya construidos en Queue Hub (Android/Windows) como referencia si la PWA no basta más adelante.
 
-**Sin decidir todavía:** si el backend/API de VisionHub se construye en Next.js (reutilizando todo lo anterior) en vez de FastAPI, y si la app móvil de cámara sigue la recomendación original del documento (Vite, por el peso del Web Worker + ONNX Runtime Web + modo offline) o también se intenta en Next.js. El entrenamiento/exportación de modelos (PyTorch/Ultralytics/ONNX) es Python en cualquier escenario, porque ninguno de los otros proyectos hace ML.
+**Motivo:** maximizar la reutilización de código y de lecciones ya aprendidas (auth, auditoría, despliegue, backups) frente a mantener dos stacks de backend distintos para un solo desarrollador. Web Workers, IndexedDB, Cache Storage y ONNX Runtime Web son APIs del navegador independientes del framework, así que Next.js no impide el modo offline ni la inferencia en worker — solo añade un paso extra de configuración de PWA/service worker que no existía con Vite.
+
+**Qué no cambia:** el entrenamiento y la exportación de modelos (PyTorch/Ultralytics/ONNX) siguen siendo Python, en scripts independientes dentro de `ml/`, sin exponerse como servicio web — no hace falta FastAPI para eso.
+
+**Riesgo registrado:** si el rendimiento de cámara/inferencia en Next.js resulta insuficiente en dispositivos reales (TECH-002, benchmark pendiente), revisar esta decisión antes de avanzar más en el motor visual — no después.
