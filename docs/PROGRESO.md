@@ -61,4 +61,8 @@
 - `curl http://visionhub.juncopineiro.com/login` → 301 a HTTPS.
 - Un primer intento justo tras el cambio de `middleware.ts` a `proxy.ts` dio un 404 puntual (Turbopack recompilando esa ruta); se repitió la prueba tres veces más y salió 200 siempre — no era un fallo real, quedó anotado para no confundirlo con un bug si vuelve a pasar tras cambiar archivos en caliente.
 
-**Pendiente:** la prueba real desde el navegador del móvil de Fernando (pedir permiso de cámara y ver la imagen en directo) — siguiente paso inmediato.
+**Confirmado por Fernando desde su móvil real (2026-11-03): login hecho y cámara visible.** Hito 1 completado.
+
+Por el camino hubo que arreglar un fallo real: el servidor de desarrollo de Next.js bloqueaba por seguridad los recursos de recarga en caliente (`/_next/hmr`) al no venir la petición de `localhost`, lo que rompía el JavaScript de la página y el botón "Entrar" no hacía nada (parecía un problema de usuario/contraseña, pero no lo era). Solución: `allowedDevOrigins: ["visionhub.juncopineiro.com"]` en `next.config.ts`. Verificado con un login completo por `curl` contra el dominio real (HTTPS) antes de pedirle a Fernando que lo reintentara.
+
+**ACC-01/ACC-02 (cámara funciona, no bloquea) — superados en un dispositivo real, por primera vez con datos de prueba reales en vez de solo `curl`.**
