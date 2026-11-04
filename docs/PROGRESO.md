@@ -97,6 +97,17 @@
 
 **Conclusión:** el rollback automático de `deploy.sh` funciona de verdad, no solo sobre el papel.
 
+## 2026-11-04 — ML en pausa (a petición de Fernando)
+
+Taxonomía ampliada ya cerrada (`docs/TAXONOMIA.md`, ML-002). Antes de seguir con el entorno Python/pipeline de ML se habló de:
+- No usar imágenes de Google para el dataset real (licencia + no se parecen a los equipos reales); como alternativa para probar la tubería técnica sin dataset, se propuso un modelo YOLO ya preentrenado (sin entrenar nada, solo exportar a ONNX y comprobar que corre en este VPS) — **no se llegó a ejecutar**.
+- CVAT no se instala en este VPS (consume mucha RAM, ~8 GB recomendados, y aquí hay muy poco margen); se instalará en la futura máquina con GPU, conectada por Tailscale.
+
+**Fernando pidió parar aquí de momento.** No tocar nada de ML (entorno Python, CVAT, descargas de modelos) hasta que lo retome explícitamente. Lo que sigue pendiente de él para poder avanzar cuando lo retome:
+- Organizar el material disperso que mencionó (fotos/vídeos reales de instalaciones).
+- Protocolo de captura: quién y dónde se hacen las primeras fotos reales.
+- Cuándo estará lista la máquina con GPU (para CVAT y entrenamiento).
+
 Por el camino hubo que arreglar un fallo real: el servidor de desarrollo de Next.js bloqueaba por seguridad los recursos de recarga en caliente (`/_next/hmr`) al no venir la petición de `localhost`, lo que rompía el JavaScript de la página y el botón "Entrar" no hacía nada (parecía un problema de usuario/contraseña, pero no lo era). Solución: `allowedDevOrigins: ["visionhub.juncopineiro.com"]` en `next.config.ts`. Verificado con un login completo por `curl` contra el dominio real (HTTPS) antes de pedirle a Fernando que lo reintentara.
 
 **ACC-01/ACC-02 (cámara funciona, no bloquea) — superados en un dispositivo real, por primera vez con datos de prueba reales en vez de solo `curl`.**
